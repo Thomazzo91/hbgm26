@@ -2,7 +2,7 @@
 <gpx version="1.1" creator="HBGM 26 mattor"
  xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>HBGM 26 Norr — Susanne &amp; Lia</name>
+    <name>HBGM 26 Norr — Susanne &amp; Liam</name>
     <desc>Kortaste körrutten mellan tidtagningspunkterna. Igång-tid står på varje stopp.</desc>
   </metadata>
   <wpt lat="56.078353" lon="12.684230">
@@ -55,7 +55,7 @@
     <type>Tidtagningspunkt</type>
   </wpt>
   <rte>
-    <name>HBGM 26 Norr — Susanne &amp; Lia</name>
+    <name>HBGM 26 Norr — Susanne &amp; Liam</name>
     <rtept lat="56.078353" lon="12.684230">
       <name>1/7 30 km hel</name>
     </rtept>
@@ -79,7 +79,7 @@
     </rtept>
   </rte>
   <trk>
-    <name>HBGM 26 Norr — Susanne &amp; Lia körväg</name>
+    <name>HBGM 26 Norr — Susanne &amp; Liam körväg</name>
     <trkseg>
       <trkpt lat="56.078353" lon="12.684230"/>
       <trkpt lat="56.078354" lon="12.684222"/>
