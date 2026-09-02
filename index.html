@@ -278,8 +278,10 @@
       else if (location.hash !== hash) history.pushState(null, "", hash);
     }
 
+    const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm-26-mattor/";
+
     function shareUrl() {
-      return location.origin + location.pathname + location.search + "#" + currentId + "/" + (selected + 1);
+      return PUBLIC_BASE + "#" + currentId + "/" + (selected + 1);
     }
 
     function googleDir(g) {
@@ -401,10 +403,11 @@
       }
     }
 
-    document.getElementById("share").addEventListener("click", async () => {
+    document.getElementById("share").addEventListener("click", async (ev) => {
+      ev.preventDefault();
       const url = shareUrl();
-      try {
-        if (navigator.share) {
+      if (location.protocol === "https:" && navigator.share) {
+        try {
           const g = groups.find((x) => x.id === currentId);
           await navigator.share({
             title: "HBGM 26 " + g.name,
@@ -412,16 +415,16 @@
             url
           });
           return;
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
         }
-      } catch (err) {
-        if (err && err.name === "AbortError") return;
       }
       try {
         await navigator.clipboard.writeText(url);
         showToast("Länk kopierad");
-      } catch {
-        prompt("Kopiera länken", url);
-      }
+        return;
+      } catch (_) {}
+      prompt("Kopiera länken och skicka till gruppen", url);
     });
 
     window.addEventListener("hashchange", () => {
