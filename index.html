@@ -228,7 +228,7 @@
   <header>
     <div class="brand">
       <h1>HBGM 26 körrutter</h1>
-      <p>Tryck på ett stopp eller en nål · skicka länken till gruppen</p>
+      <p>Kortaste körvägen · tryck på nål eller kort · skicka länken</p>
     </div>
     <div class="groups" id="groups"></div>
     <div class="actions">
@@ -358,7 +358,7 @@
             <div class="times"><a href="${nav}" target="_blank" rel="noopener">Navigera hit</a></div>
           </article>${g.legs[i] ? `<div class="leg">Kör ${g.legs[i].km} km · ${g.legs[i].min} min till nästa</div>` : ""}`;
         }).join("")}
-        <p class="hint">Tryck på en nål eller ett kort. Skicka länken så öppnas rätt grupp och stopp.</p>
+        <p class="hint">Numren är kortaste körvägen, inte igång-ordning. Igång-tiden står på varje stopp.</p>
       `;
       sidebar.querySelectorAll(".stop").forEach((el) => {
         const pick = (ev) => {
