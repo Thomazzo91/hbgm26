@@ -107,6 +107,27 @@
       background: #3a4553; margin: 8px auto 2px;
       flex: none;
     }
+    .modes {
+      display: flex;
+      gap: 6px;
+      padding: 2px 12px 8px;
+      flex: none;
+    }
+    .modes button {
+      flex: 1;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #10161c;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.82rem;
+    }
+    .modes button[aria-pressed="true"] {
+      background: var(--accent);
+      color: #0b1220;
+      border-color: transparent;
+    }
     .now {
       padding: 6px 14px 12px;
       border-bottom: 1px solid var(--line);
@@ -250,18 +271,23 @@
   </div>
   <section class="sheet">
     <div class="handle"></div>
+    <div class="modes" id="modes">
+      <button type="button" data-mode="kortast" aria-pressed="true">Kortast körväg</button>
+      <button type="button" data-mode="iga">Igång-tid</button>
+    </div>
     <div class="now" id="now"></div>
     <div class="list" id="sidebar"></div>
   </section>
   <div class="toast" id="toast">Länk kopierad</div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="routes.js?v=5"></script>
+  <script src="routes.js?v=6"></script>
   <script>
     const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm26/";
     const groups = window.HBGM_ROUTES.groups;
     const groupBar = document.getElementById("groups");
     const sidebar = document.getElementById("sidebar");
     const nowEl = document.getElementById("now");
+    const modeBar = document.getElementById("modes");
     const gpxLink = document.getElementById("gpx");
     const gmapsLink = document.getElementById("gmaps");
     const toast = document.getElementById("toast");
@@ -275,27 +301,50 @@
     let layer = L.layerGroup().addTo(map);
     let markers = [];
     let currentId = groups[0].id;
+    let currentMode = "kortast";
     let selected = 0;
     let routeLine = null;
 
+    function viewOf(id, mode) {
+      const g = groups.find((x) => x.id === id) || groups[0];
+      const m = (g.modes && g.modes[mode]) || g.modes.kortast;
+      return {
+        id: g.id,
+        name: g.name,
+        ansvarig: g.ansvarig,
+        color: g.color,
+        km: m.km,
+        min: m.min,
+        gpx: m.gpx,
+        stops: m.stops,
+        legs: m.legs,
+        track: m.track
+      };
+    }
     function parseHash() {
-      const raw = (location.hash || "#soder").replace(/^#/, "");
-      const [gid, stopRaw] = raw.split("/");
-      const g = groups.find((x) => x.id === gid) || groups[0];
-      const n = parseInt(stopRaw, 10);
-      const idx = Number.isFinite(n) && n >= 1 && n <= g.stops.length ? n - 1 : 0;
-      return { id: g.id, idx };
+      const parts = (location.hash || "#soder").replace(/^#/, "").split("/").filter(Boolean);
+      const g = groups.find((x) => x.id === parts[0]) || groups[0];
+      let mode = "kortast";
+      let i = 1;
+      if (parts[1] === "iga") { mode = "iga"; i = 2; }
+      const view = viewOf(g.id, mode);
+      const n = parseInt(parts[i], 10);
+      const idx = Number.isFinite(n) && n >= 1 && n <= view.stops.length ? n - 1 : 0;
+      return { id: g.id, mode, idx };
     }
-    function hashFor(id, idx) {
-      return idx === 0 ? "#" + id : "#" + id + "/" + (idx + 1);
+    function hashFor(id, mode, idx) {
+      let h = "#" + id;
+      if (mode === "iga") h += "/iga";
+      if (idx > 0) h += "/" + (idx + 1);
+      return h;
     }
-    function setHash(id, idx, replace) {
-      const hash = hashFor(id, idx);
+    function setHash(id, mode, idx, replace) {
+      const hash = hashFor(id, mode, idx);
       if (replace) history.replaceState(null, "", hash);
       else if (location.hash !== hash) history.pushState(null, "", hash);
     }
     function shareUrl() {
-      return PUBLIC_BASE.replace(/\/?$/, "/") + hashFor(currentId, selected);
+      return PUBLIC_BASE.replace(/\/?$/, "/") + hashFor(currentId, currentMode, selected);
     }
     function googleDir(g) {
       return "https://www.google.com/maps/dir/" + g.stops.map((s) => s.lat.toFixed(6) + "," + s.lon.toFixed(6)).join("/");
@@ -335,8 +384,18 @@
       b.type = "button";
       b.dataset.id = g.id;
       b.textContent = g.name;
-      b.addEventListener("click", () => show(g.id, 0, false));
+      b.addEventListener("click", () => show(g.id, currentMode, 0, false));
       groupBar.appendChild(b);
+    });
+    modeBar.querySelectorAll("button").forEach((b) => {
+      b.addEventListener("click", () => {
+        const next = b.dataset.mode;
+        const prev = viewOf(currentId, currentMode);
+        const label = prev.stops[selected] && prev.stops[selected].label;
+        const nxt = viewOf(currentId, next);
+        const idx = Math.max(0, nxt.stops.findIndex((s) => s.label === label));
+        show(currentId, next, idx, false);
+      });
     });
 
     document.getElementById("moreBtn").addEventListener("click", (e) => {
@@ -361,13 +420,15 @@
         </div>`;
     }
 
-    function show(id, idx, fromHash) {
-      const g = groups.find((x) => x.id === id) || groups[0];
+    function show(id, mode, idx, fromHash) {
+      const g = viewOf(id, mode);
       currentId = g.id;
+      currentMode = mode;
       selected = Math.max(0, Math.min(idx, g.stops.length - 1));
-      if (!fromHash) setHash(currentId, selected, false);
+      if (!fromHash) setHash(currentId, currentMode, selected, false);
       document.documentElement.style.setProperty("--accent", g.color);
       [...groupBar.children].forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === g.id)));
+      modeBar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === currentMode)));
       gpxLink.href = g.gpx;
       gpxLink.download = g.gpx;
       gmapsLink.href = googleDir(g);
@@ -387,8 +448,9 @@
       });
       map.fitBounds(routeLine.getBounds(), mapPad());
       renderNow(g);
+      const orderHint = currentMode === "iga" ? "i igång-ordning" : "kortaste körvägen";
       sidebar.innerHTML = `
-        <p class="who">${g.ansvarig} · ${g.km} km · ${g.min} min</p>
+        <p class="who">${g.ansvarig} · ${g.km} km · ${g.min} min · ${orderHint}</p>
         ${g.stops.map((s, i) => {
           const warn = /kod|fredriksdal|kolla bilden/i.test(s.placering || "");
           return `<article class="stop" data-i="${i}">
@@ -408,9 +470,9 @@
     }
 
     function selectStop(i, pan) {
-      const g = groups.find((x) => x.id === currentId);
+      const g = viewOf(currentId, currentMode);
       selected = i;
-      setHash(currentId, selected, true);
+      setHash(currentId, currentMode, selected, true);
       markers.forEach((m, n) => {
         m.setIcon(markerIcon(g.color, n + 1, n === selected));
         m.setZIndexOffset(n === selected ? 800 : 0);
@@ -420,7 +482,7 @@
     }
 
     function paintSelection(pan) {
-      const g = groups.find((x) => x.id === currentId);
+      const g = viewOf(currentId, currentMode);
       sidebar.querySelectorAll(".stop").forEach((el) => {
         const on = Number(el.dataset.i) === selected;
         el.classList.toggle("is-on", on);
@@ -436,7 +498,7 @@
       const url = shareUrl();
       if (location.protocol === "https:" && navigator.share) {
         try {
-          const g = groups.find((x) => x.id === currentId);
+          const g = viewOf(currentId, currentMode);
           await navigator.share({ title: "HBGM 26 " + g.name, text: g.stops[selected].label, url });
           return;
         } catch (err) {
@@ -452,8 +514,8 @@
     });
 
     window.addEventListener("hashchange", () => {
-      const { id, idx } = parseHash();
-      if (id !== currentId) show(id, idx, true);
+      const { id, mode, idx } = parseHash();
+      if (id !== currentId || mode !== currentMode) show(id, mode, idx, true);
       else selectStop(idx, true);
     });
     window.addEventListener("resize", () => {
@@ -462,7 +524,7 @@
     });
     new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById("map"));
     const start = parseHash();
-    show(start.id, start.idx, true);
+    show(start.id, start.mode, start.idx, true);
   </script>
 </body>
 </html>
