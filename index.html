@@ -200,18 +200,6 @@
       border-color: #22c55e;
       color: #052e16;
     }
-    .been-wide {
-      width: 100%;
-      min-height: 44px;
-      padding: 0 12px;
-      margin-top: 10px;
-      font-weight: 800;
-      font-size: 0.92rem;
-      gap: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
     .num {
       width: 28px; height: 28px; border-radius: 50%;
       display: inline-flex; align-items: center; justify-content: center;
@@ -319,7 +307,7 @@
   </section>
   <div class="toast" id="toast">Länk kopierad</div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="routes.js?v=7"></script>
+  <script src="routes.js?v=8"></script>
   <script>
     const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm26/";
     const groups = window.HBGM_ROUTES.groups;
@@ -471,7 +459,6 @@
     function renderNow(g) {
       const s = g.stops[selected];
       const nav = "https://www.google.com/maps/dir/?api=1&destination=" + s.lat + "," + s.lon + "&travelmode=driving";
-      const done = isDone(g.id, s.label);
       nowEl.innerHTML = `
         <div class="now-top">
           <span class="num" style="background:${g.color}">${selected + 1}</span>
@@ -480,14 +467,7 @@
             <p>${s.setup || ""} · Igång ${s.iga}</p>
           </div>
           <a class="nav-btn" href="${nav}" target="_blank" rel="noopener">Navigera</a>
-        </div>
-        <button type="button" class="been been-wide" data-i="${selected}" aria-pressed="${done}">
-          ${CHECK_SVG}${done ? "Har varit här" : "Bocka av — har varit här"}
-        </button>`;
-      nowEl.querySelector(".been").addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        toggleDone(selected);
-      });
+        </div>`;
     }
 
     function toggleDone(i) {
@@ -511,12 +491,6 @@
         const btn = el.querySelector(".been");
         if (btn) btn.setAttribute("aria-pressed", String(done));
       });
-      const nowBtn = nowEl.querySelector(".been");
-      if (nowBtn && g.stops[selected]) {
-        const done = isDone(g.id, g.stops[selected].label);
-        nowBtn.setAttribute("aria-pressed", String(done));
-        nowBtn.innerHTML = CHECK_SVG + (done ? "Har varit här" : "Bocka av — har varit här");
-      }
       markers.forEach((m, n) => {
         const s = g.stops[n];
         m.setIcon(markerIcon(g.color, n + 1, n === selected, !!(s && isDone(g.id, s.label))));
