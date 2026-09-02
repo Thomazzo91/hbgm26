@@ -171,10 +171,46 @@
       border-color: var(--accent);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent);
     }
+    .stop.is-done { background: #0e1a14; }
+    .stop.is-done h3 { color: var(--muted); }
+    .stop-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
     .stop h3 {
       margin: 0 0 4px;
       font-size: 0.95rem;
       display: flex; gap: 8px; align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+    .been {
+      width: 44px; height: 44px; flex: none;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: #10161c;
+      color: var(--muted);
+      display: grid; place-items: center;
+      padding: 0;
+    }
+    .been svg { width: 22px; height: 22px; }
+    .been[aria-pressed="true"] {
+      background: #22c55e;
+      border-color: #22c55e;
+      color: #052e16;
+    }
+    .been-wide {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      margin-top: 10px;
+      font-weight: 800;
+      font-size: 0.92rem;
+      gap: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .num {
       width: 28px; height: 28px; border-radius: 50%;
@@ -206,6 +242,8 @@
       width: 42px; height: 42px; border-width: 3px;
       box-shadow: 0 0 0 4px rgba(255,255,255,.28);
     }
+    .mk.is-done .mk-num { background: #22c55e !important; }
+    .mk-num svg { width: 18px; height: 18px; display: block; }
     .more {
       position: absolute; right: 10px; top: calc(var(--header-h) + 4px);
       z-index: 450; display: none;
@@ -268,6 +306,7 @@
   <div class="more" id="more">
     <a id="gmaps" target="_blank" rel="noopener">Hela rutten i Maps</a>
     <a id="gpx" href="#" download>Ladda ner GPX</a>
+    <button type="button" id="clearDone">Rensa avbockning</button>
   </div>
   <section class="sheet">
     <div class="handle"></div>
@@ -280,7 +319,7 @@
   </section>
   <div class="toast" id="toast">Länk kopierad</div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="routes.js?v=6"></script>
+  <script src="routes.js?v=7"></script>
   <script>
     const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm26/";
     const groups = window.HBGM_ROUTES.groups;
@@ -346,15 +385,30 @@
     function shareUrl() {
       return PUBLIC_BASE.replace(/\/?$/, "/") + hashFor(currentId, currentMode, selected);
     }
+    const VISIT_KEY = "hbgm26-visited-v1";
+    const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+    let visited = {};
+    try { visited = JSON.parse(localStorage.getItem(VISIT_KEY) || "{}") || {}; } catch (e) { visited = {}; }
+    function visitKey(groupId, label) { return groupId + "|" + label; }
+    function isDone(groupId, label) { return !!visited[visitKey(groupId, label)]; }
+    function setDone(groupId, label, on) {
+      const k = visitKey(groupId, label);
+      if (on) visited[k] = true;
+      else delete visited[k];
+      try { localStorage.setItem(VISIT_KEY, JSON.stringify(visited)); } catch (e) {}
+    }
+    function doneCount(g) {
+      return g.stops.filter((s) => isDone(g.id, s.label)).length;
+    }
     function googleDir(g) {
       return "https://www.google.com/maps/dir/" + g.stops.map((s) => s.lat.toFixed(6) + "," + s.lon.toFixed(6)).join("/");
     }
-    function markerIcon(color, n, on) {
+    function markerIcon(color, n, on, done) {
       return L.divIcon({
         className: "",
         iconSize: on ? [42, 42] : [34, 34],
         iconAnchor: on ? [21, 21] : [17, 17],
-        html: `<div class="mk${on ? " is-on" : ""}"><div class="mk-num" style="background:${color}">${n}</div></div>`
+        html: `<div class="mk${on ? " is-on" : ""}${done ? " is-done" : ""}"><div class="mk-num" style="background:${color}">${done ? CHECK_SVG : n}</div></div>`
       });
     }
     function showToast(text) {
@@ -405,10 +459,19 @@
     document.addEventListener("click", (e) => {
       if (!e.target.closest("#more") && !e.target.closest("#moreBtn")) more.style.display = "none";
     });
+    document.getElementById("clearDone").addEventListener("click", () => {
+      more.style.display = "none";
+      const g = viewOf(currentId, currentMode);
+      if (!confirm("Rensa avbockning för " + g.name + "?")) return;
+      g.stops.forEach((s) => setDone(g.id, s.label, false));
+      paintDone(g);
+      showToast("Avbockning rensad");
+    });
 
     function renderNow(g) {
       const s = g.stops[selected];
       const nav = "https://www.google.com/maps/dir/?api=1&destination=" + s.lat + "," + s.lon + "&travelmode=driving";
+      const done = isDone(g.id, s.label);
       nowEl.innerHTML = `
         <div class="now-top">
           <span class="num" style="background:${g.color}">${selected + 1}</span>
@@ -417,7 +480,47 @@
             <p>${s.setup || ""} · Igång ${s.iga}</p>
           </div>
           <a class="nav-btn" href="${nav}" target="_blank" rel="noopener">Navigera</a>
-        </div>`;
+        </div>
+        <button type="button" class="been been-wide" data-i="${selected}" aria-pressed="${done}">
+          ${CHECK_SVG}${done ? "Har varit här" : "Bocka av — har varit här"}
+        </button>`;
+      nowEl.querySelector(".been").addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        toggleDone(selected);
+      });
+    }
+
+    function toggleDone(i) {
+      const g = viewOf(currentId, currentMode);
+      const s = g.stops[i];
+      if (!s) return;
+      setDone(g.id, s.label, !isDone(g.id, s.label));
+      paintDone(g);
+    }
+
+    function paintDone(g) {
+      const nDone = doneCount(g);
+      const orderHint = currentMode === "iga" ? "i igång-ordning" : "kortaste körvägen";
+      const prog = document.getElementById("progress");
+      if (prog) prog.textContent = g.ansvarig + " · " + g.km + " km · " + g.min + " min · " + nDone + "/" + g.stops.length + " avbockade · " + orderHint;
+      sidebar.querySelectorAll(".stop").forEach((el) => {
+        const i = Number(el.dataset.i);
+        const s = g.stops[i];
+        const done = !!(s && isDone(g.id, s.label));
+        el.classList.toggle("is-done", done);
+        const btn = el.querySelector(".been");
+        if (btn) btn.setAttribute("aria-pressed", String(done));
+      });
+      const nowBtn = nowEl.querySelector(".been");
+      if (nowBtn && g.stops[selected]) {
+        const done = isDone(g.id, g.stops[selected].label);
+        nowBtn.setAttribute("aria-pressed", String(done));
+        nowBtn.innerHTML = CHECK_SVG + (done ? "Har varit här" : "Bocka av — har varit här");
+      }
+      markers.forEach((m, n) => {
+        const s = g.stops[n];
+        m.setIcon(markerIcon(g.color, n + 1, n === selected, !!(s && isDone(g.id, s.label))));
+      });
     }
 
     function show(id, mode, idx, fromHash) {
@@ -439,7 +542,7 @@
       routeLine = L.polyline(latlngs, { color: g.color, weight: 6, opacity: 0.92 }).addTo(layer);
       g.stops.forEach((s, i) => {
         const m = L.marker([s.lat, s.lon], {
-          icon: markerIcon(g.color, i + 1, i === selected),
+          icon: markerIcon(g.color, i + 1, i === selected, isDone(g.id, s.label)),
           zIndexOffset: i === selected ? 700 : 0
         });
         m.on("click", () => selectStop(i, true));
@@ -450,11 +553,15 @@
       renderNow(g);
       const orderHint = currentMode === "iga" ? "i igång-ordning" : "kortaste körvägen";
       sidebar.innerHTML = `
-        <p class="who">${g.ansvarig} · ${g.km} km · ${g.min} min · ${orderHint}</p>
+        <p class="who" id="progress">${g.ansvarig} · ${g.km} km · ${g.min} min · ${doneCount(g)}/${g.stops.length} avbockade · ${orderHint}</p>
         ${g.stops.map((s, i) => {
           const warn = /kod|fredriksdal|kolla bilden/i.test(s.placering || "");
-          return `<article class="stop" data-i="${i}">
-            <h3><span class="num" style="background:${g.color}">${i + 1}</span>${s.label}</h3>
+          const done = isDone(g.id, s.label);
+          return `<article class="stop${done ? " is-done" : ""}" data-i="${i}">
+            <div class="stop-head">
+              <h3><span class="num" style="background:${g.color}">${i + 1}</span>${s.label}</h3>
+              <button type="button" class="been" data-i="${i}" aria-pressed="${done}" aria-label="Bocka av ${s.label}">${CHECK_SVG}</button>
+            </div>
             <div class="note">${s.setup || ""}</div>
             <div class="times"><span>Igång <strong>${s.iga}</strong></span><span>Första <strong>${s.forsta}</strong></span><span>Sista <strong>${s.sista}</strong></span></div>
             ${s.placering ? `<div class="note${warn ? " warn" : ""}">${s.placering}</div>` : ""}
@@ -462,6 +569,12 @@
         }).join("")}`;
       sidebar.querySelectorAll(".stop").forEach((el) => {
         el.addEventListener("click", () => selectStop(Number(el.dataset.i), true));
+      });
+      sidebar.querySelectorAll(".been").forEach((btn) => {
+        btn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          toggleDone(Number(btn.dataset.i));
+        });
       });
       paintSelection(fromHash && /\/[1-9]\d*$/.test(location.hash));
       setTimeout(() => {
@@ -474,7 +587,8 @@
       selected = i;
       setHash(currentId, currentMode, selected, true);
       markers.forEach((m, n) => {
-        m.setIcon(markerIcon(g.color, n + 1, n === selected));
+        const s = g.stops[n];
+        m.setIcon(markerIcon(g.color, n + 1, n === selected, !!(s && isDone(g.id, s.label))));
         m.setZIndexOffset(n === selected ? 800 : 0);
       });
       renderNow(g);
