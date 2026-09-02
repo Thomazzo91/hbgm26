@@ -2,266 +2,279 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Cache-Control" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f1419" />
-  <title>HBGM 26 — Körrutter mattor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HBGM 26" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="description" content="Körrutter för tidtagningsmattor, Helsingborg Marathon 2026." />
+  <title>HBGM 26 · Mattor</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root {
-      --bg: #0f1419;
-      --panel: #171e26;
+      --bg: #0b1220;
+      --panel: #111824;
       --line: #2a3440;
-      --text: #e8eef4;
-      --muted: #93a0ae;
-      --soder: #d97706;
+      --text: #f4f7fb;
+      --muted: #9aa6b4;
+      --soder: #f59e0b;
       --mitten: #3b82f6;
       --norr: #10b981;
-      --safe-top: env(safe-area-inset-top);
-      --safe-bot: env(safe-area-inset-bottom);
+      --accent: #3b82f6;
+      --header-h: calc(52px + env(safe-area-inset-top));
+      --sheet: min(46dvh, 380px);
     }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+    }
     body {
-      font-family: "Segoe UI", system-ui, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
-      display: flex;
-      flex-direction: column;
-      padding-top: var(--safe-top);
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
+      touch-action: manipulation;
     }
     header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 500;
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px 12px;
       align-items: center;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--line);
-      background: var(--panel);
-      flex: none;
+      gap: 8px;
+      padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
+      background: linear-gradient(to bottom, rgba(11,18,32,.94), rgba(11,18,32,.45) 78%, transparent);
     }
-    header h1 { margin: 0; font-size: 1rem; }
-    header p { margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
-    .brand { min-width: 0; }
-    .groups { display: flex; gap: 8px; flex: 1; }
+    .groups { display: flex; flex: 1; gap: 6px; min-width: 0; }
     .groups button {
-      border: 1px solid var(--line);
-      background: #10161c;
-      color: var(--text);
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-weight: 700;
-      cursor: pointer;
-      min-height: 44px;
       flex: 1;
+      min-height: 44px;
+      border: 0;
+      border-radius: 12px;
+      background: rgba(16,22,28,.9);
+      color: var(--text);
+      font-weight: 800;
+      font-size: 0.95rem;
+      box-shadow: 0 1px 6px rgba(0,0,0,.28);
     }
     .groups button[aria-pressed="true"] { color: #0b1220; }
-    .groups button[data-id="soder"][aria-pressed="true"] { background: var(--soder); border-color: var(--soder); }
-    .groups button[data-id="mitten"][aria-pressed="true"] { background: var(--mitten); border-color: var(--mitten); }
-    .groups button[data-id="norr"][aria-pressed="true"] { background: var(--norr); border-color: var(--norr); }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .actions a, .actions button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.85rem;
-      border: 0;
-      cursor: pointer;
-      color: #0b1220;
-      background: #e8eef4;
-    }
-    .actions a.secondary, .actions button.secondary {
-      background: transparent;
+    .groups button[data-id="soder"][aria-pressed="true"] { background: var(--soder); }
+    .groups button[data-id="mitten"][aria-pressed="true"] { background: var(--mitten); }
+    .groups button[data-id="norr"][aria-pressed="true"] { background: var(--norr); }
+    .icon-btn {
+      width: 44px; height: 44px; flex: none;
+      border: 0; border-radius: 12px;
+      background: rgba(16,22,28,.9);
       color: var(--text);
-      border: 1px solid var(--line);
+      display: grid; place-items: center;
+      box-shadow: 0 1px 6px rgba(0,0,0,.28);
     }
-    main {
-      flex: 1;
-      min-height: 0;
-      display: grid;
-      grid-template-columns: minmax(280px, 380px) 1fr;
-      grid-template-areas: "side map";
+    #map {
+      position: absolute;
+      inset: 0 0 var(--sheet) 0;
+      background: var(--bg);
     }
-    .sidebar { grid-area: side; }
-    #map { grid-area: map; min-height: 42vh; }
-    .sidebar {
+    .leaflet-control-attribution {
+      max-width: 46vw;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 10px !important;
+    }
+    .leaflet-bottom.leaflet-right { margin-bottom: 8px; }
+    .sheet {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: var(--sheet);
+      background: var(--panel);
+      border-top: 1px solid var(--line);
+      border-radius: 18px 18px 0 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 400;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -8px 24px rgba(0,0,0,.28);
+    }
+    .handle {
+      width: 42px; height: 4px; border-radius: 99px;
+      background: #3a4553; margin: 8px auto 2px;
+      flex: none;
+    }
+    .now {
+      padding: 6px 14px 12px;
+      border-bottom: 1px solid var(--line);
+      flex: none;
+    }
+    .now-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .now h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .now p { margin: 4px 0 0; color: var(--muted); font-size: 0.8rem; }
+    .nav-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 44px; padding: 0 14px; border-radius: 12px;
+      background: var(--accent); color: #0b1220;
+      font-weight: 800; text-decoration: none; flex: none;
+      font-size: 0.95rem;
+    }
+    .list {
       overflow: auto;
-      border-right: 1px solid var(--line);
-      padding: 12px 12px calc(20px + var(--safe-bot));
       -webkit-overflow-scrolling: touch;
+      padding: 10px 12px 18px;
+      flex: 1;
     }
-    .summary {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .stat {
-      background: #10161c;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-    .stat b { display: block; font-size: 1.1rem; }
-    .stat span { color: var(--muted); font-size: 0.75rem; }
+    .who { color: var(--muted); font-size: 0.78rem; margin: 0 2px 10px; }
     .stop {
       background: #10161c;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 12px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      text-align: left;
-      width: 100%;
-      color: inherit;
-      font: inherit;
-      display: block;
+      margin-bottom: 8px;
     }
     .stop.is-on {
-      border-width: 2px;
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #3b82f6) 35%, transparent);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent);
     }
     .stop h3 {
-      margin: 0 0 6px;
+      margin: 0 0 4px;
       font-size: 0.95rem;
-      display: flex;
-      gap: 8px;
-      align-items: center;
+      display: flex; gap: 8px; align-items: center;
     }
     .num {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: #0b1220;
-      flex: none;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #0b1220; flex: none;
     }
-    .times {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-size: 0.78rem;
-      margin: 6px 0;
-    }
+    .times { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 0.78rem; margin-top: 6px; }
     .times strong { color: var(--text); }
-    .note { font-size: 0.85rem; line-height: 1.35; }
-    .note.warn {
-      background: #3a2a08;
-      color: #fde68a;
-      padding: 8px 10px;
-      border-radius: 8px;
-    }
-    .leg { color: var(--muted); font-size: 0.75rem; margin: 6px 2px 10px; }
-    .hint { color: var(--muted); font-size: 0.75rem; line-height: 1.4; margin-top: 12px; }
+    .note { font-size: 0.85rem; margin-top: 4px; }
+    .note.warn { background: #3a2a08; color: #fde68a; padding: 8px 10px; border-radius: 8px; margin-top: 8px; }
+    .leg { color: var(--muted); font-size: 0.72rem; margin: 0 4px 8px; }
     .toast {
-      position: fixed;
-      left: 50%;
-      bottom: calc(16px + var(--safe-bot));
+      position: fixed; left: 50%; top: calc(var(--header-h) + 8px);
       transform: translateX(-50%);
-      background: #e8eef4;
-      color: #0b1220;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.85rem;
-      z-index: 5000;
-      display: none;
-    }
-    .mk {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      background: #e8eef4; color: #0b1220;
+      padding: 10px 14px; border-radius: 999px;
+      font-weight: 700; z-index: 800; display: none;
       white-space: nowrap;
     }
     .mk-num {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      color: #0b1220;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      color: #0b1220; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
       border: 2px solid #fff;
-      box-shadow: 0 1px 4px rgba(0,0,0,.45);
-      flex: none;
+      box-shadow: 0 1px 5px rgba(0,0,0,.4);
+      font-size: 15px;
     }
     .mk.is-on .mk-num {
-      width: 38px;
-      height: 38px;
-      border-width: 4px;
-      box-shadow: 0 0 0 4px rgba(255,255,255,.35), 0 2px 8px rgba(0,0,0,.5);
+      width: 42px; height: 42px; border-width: 3px;
+      box-shadow: 0 0 0 4px rgba(255,255,255,.28);
     }
-    .mk-lab {
-      background: #0b1220;
-      color: #fff;
-      padding: 3px 8px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      box-shadow: 0 1px 4px rgba(0,0,0,.35);
+    .more {
+      position: absolute; right: 10px; top: calc(var(--header-h) + 4px);
+      z-index: 450; display: none;
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 6px; min-width: 190px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
     }
-    @media (max-width: 860px) {
-      main {
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(38vh, 46vh) 1fr;
-        grid-template-areas: "map" "side";
+    .more a, .more button {
+      display: block; width: 100%; text-align: left;
+      background: none; border: 0; color: var(--text);
+      padding: 12px; font-weight: 700; text-decoration: none;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 859px) and (orientation: landscape) {
+      :root { --sheet: 0px; }
+      #map { inset: 0 42% 0 0; }
+      .sheet {
+        left: 58%; width: 42%; height: auto; top: 0; bottom: 0;
+        border-radius: 0; border-left: 1px solid var(--line); border-top: 0;
+        box-shadow: none;
       }
-      .sidebar { border-right: 0; border-top: 1px solid var(--line); }
-      .actions { width: 100%; }
-      .actions a, .actions button { flex: 1; }
-      .mk-lab { display: none; }
-      .mk.is-on .mk-lab { display: block; }
+      .handle { display: none; }
+      header { right: 42%; }
+    }
+    @media (min-width: 860px) {
+      :root { --sheet: 0px; --header-h: 60px; }
+      header {
+        position: static;
+        background: #111824;
+        padding: 8px 16px;
+      }
+      #map {
+        position: absolute;
+        top: 60px; left: 380px; right: 0; bottom: 0;
+      }
+      .sheet {
+        position: absolute;
+        top: 60px; left: 0; width: 380px; height: auto; bottom: 0;
+        border-radius: 0; border-right: 1px solid var(--line); border-top: 0;
+        box-shadow: none;
+      }
+      .handle { display: none; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <h1>HBGM 26 körrutter</h1>
-      <p>Kortaste körvägen · tryck på nål eller kort · skicka länken</p>
-    </div>
     <div class="groups" id="groups"></div>
-    <div class="actions">
-      <button type="button" id="share" class="secondary">Kopiera länk</button>
-      <a id="gmaps" class="secondary" target="_blank" rel="noopener">Google Maps</a>
-      <a id="gpx" href="#" download>GPX</a>
-    </div>
+    <button type="button" class="icon-btn" id="share" aria-label="Kopiera länk" title="Kopiera länk">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>
+      </svg>
+    </button>
+    <button type="button" class="icon-btn" id="moreBtn" aria-label="Mer" title="Mer">···</button>
   </header>
-  <main>
-    <aside class="sidebar" id="sidebar"></aside>
-    <div id="map"></div>
-  </main>
+  <div id="map"></div>
+  <div class="more" id="more">
+    <a id="gmaps" target="_blank" rel="noopener">Hela rutten i Maps</a>
+    <a id="gpx" href="#" download>Ladda ner GPX</a>
+  </div>
+  <section class="sheet">
+    <div class="handle"></div>
+    <div class="now" id="now"></div>
+    <div class="list" id="sidebar"></div>
+  </section>
   <div class="toast" id="toast">Länk kopierad</div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="routes.js?v=3"></script>
+  <script src="routes.js?v=4"></script>
   <script>
+    const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm26/";
     const groups = window.HBGM_ROUTES.groups;
     const groupBar = document.getElementById("groups");
     const sidebar = document.getElementById("sidebar");
+    const nowEl = document.getElementById("now");
     const gpxLink = document.getElementById("gpx");
     const gmapsLink = document.getElementById("gmaps");
     const toast = document.getElementById("toast");
-    const map = L.map("map", { tap: true });
+    const more = document.getElementById("more");
+    const map = L.map("map", { tap: true, zoomControl: false, attributionControl: true });
+    L.control.zoom({ position: "bottomright" }).addTo(map);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
+      maxZoom: 19, attribution: "&copy; OpenStreetMap"
     }).addTo(map);
 
     let layer = L.layerGroup().addTo(map);
     let markers = [];
     let currentId = groups[0].id;
     let selected = 0;
+    let routeLine = null;
 
     function parseHash() {
       const raw = (location.hash || "#soder").replace(/^#/, "");
@@ -271,38 +284,46 @@
       const idx = Number.isFinite(n) && n >= 1 && n <= g.stops.length ? n - 1 : 0;
       return { id: g.id, idx };
     }
-
+    function hashFor(id, idx) {
+      return idx === 0 ? "#" + id : "#" + id + "/" + (idx + 1);
+    }
     function setHash(id, idx, replace) {
-      const hash = "#" + id + "/" + (idx + 1);
+      const hash = hashFor(id, idx);
       if (replace) history.replaceState(null, "", hash);
       else if (location.hash !== hash) history.pushState(null, "", hash);
     }
-
-    const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm-26-mattor/";
-
     function shareUrl() {
-      return PUBLIC_BASE + "#" + currentId + "/" + (selected + 1);
+      return PUBLIC_BASE.replace(/\/?$/, "/") + hashFor(currentId, selected);
     }
-
     function googleDir(g) {
-      const pts = g.stops.map((s) => s.lat.toFixed(6) + "," + s.lon.toFixed(6));
-      return "https://www.google.com/maps/dir/" + pts.join("/");
+      return "https://www.google.com/maps/dir/" + g.stops.map((s) => s.lat.toFixed(6) + "," + s.lon.toFixed(6)).join("/");
     }
-
-    function markerIcon(color, n, label, on) {
+    function markerIcon(color, n, on) {
       return L.divIcon({
         className: "",
-        iconSize: on ? [240, 38] : [220, 30],
-        iconAnchor: on ? [19, 19] : [15, 15],
-        html: `<div class="mk${on ? " is-on" : ""}"><div class="mk-num" style="background:${color}">${n}</div><div class="mk-lab">${n}. ${label}</div></div>`
+        iconSize: on ? [42, 42] : [34, 34],
+        iconAnchor: on ? [21, 21] : [17, 17],
+        html: `<div class="mk${on ? " is-on" : ""}"><div class="mk-num" style="background:${color}">${n}</div></div>`
       });
     }
-
     function showToast(text) {
       toast.textContent = text;
       toast.style.display = "block";
       clearTimeout(showToast.t);
       showToast.t = setTimeout(() => { toast.style.display = "none"; }, 1800);
+    }
+    function mapPad() {
+      map.invalidateSize();
+      const header = document.querySelector("header").getBoundingClientRect();
+      const sheet = document.querySelector(".sheet").getBoundingClientRect();
+      const landscape = window.innerWidth < 860 && window.matchMedia("(orientation: landscape)").matches;
+      if (window.innerWidth >= 860 || landscape) {
+        return { paddingTopLeft: [16, 16], paddingBottomRight: [16, 16] };
+      }
+      return {
+        paddingTopLeft: [18, Math.round(header.height) + 10],
+        paddingBottomRight: [18, 18]
+      };
     }
 
     groups.forEach((g) => {
@@ -313,6 +334,28 @@
       b.addEventListener("click", () => show(g.id, 0, false));
       groupBar.appendChild(b);
     });
+
+    document.getElementById("moreBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      more.style.display = more.style.display === "block" ? "none" : "block";
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#more") && !e.target.closest("#moreBtn")) more.style.display = "none";
+    });
+
+    function renderNow(g) {
+      const s = g.stops[selected];
+      const nav = "https://www.google.com/maps/dir/?api=1&destination=" + s.lat + "," + s.lon + "&travelmode=driving";
+      nowEl.innerHTML = `
+        <div class="now-top">
+          <span class="num" style="background:${g.color}">${selected + 1}</span>
+          <div style="flex:1;min-width:0">
+            <h2>${s.label}</h2>
+            <p>${s.setup || ""} · Igång ${s.iga}</p>
+          </div>
+          <a class="nav-btn" href="${nav}" target="_blank" rel="noopener">Navigera</a>
+        </div>`;
+    }
 
     function show(id, idx, fromHash) {
       const g = groups.find((x) => x.id === id) || groups[0];
@@ -328,56 +371,36 @@
       layer.clearLayers();
       markers = [];
       const latlngs = g.track.map(([lon, lat]) => [lat, lon]);
-      const line = L.polyline(latlngs, { color: g.color, weight: 5, opacity: 0.9 }).addTo(layer);
+      routeLine = L.polyline(latlngs, { color: g.color, weight: 6, opacity: 0.92 }).addTo(layer);
       g.stops.forEach((s, i) => {
         const m = L.marker([s.lat, s.lon], {
-          icon: markerIcon(g.color, i + 1, s.label, i === selected),
-          zIndexOffset: i === selected ? 600 : 0
+          icon: markerIcon(g.color, i + 1, i === selected),
+          zIndexOffset: i === selected ? 700 : 0
         });
         m.on("click", () => selectStop(i, true));
         m.addTo(layer);
         markers.push(m);
       });
-      map.fitBounds(line.getBounds(), { padding: [28, 28] });
-
+      map.fitBounds(routeLine.getBounds(), mapPad());
+      renderNow(g);
       sidebar.innerHTML = `
-        <div class="summary">
-          <div class="stat"><b>${g.name}</b><span>${g.ansvarig}</span></div>
-          <div class="stat"><b>${g.km} km</b><span>${g.min} min · ${g.stops.length} stopp</span></div>
-        </div>
+        <p class="who">${g.ansvarig} · ${g.km} km · ${g.min} min</p>
         ${g.stops.map((s, i) => {
-          const setup = s.setup || ("Tidtagningsmatta " + s.label);
           const warn = /kod|fredriksdal|kolla bilden/i.test(s.placering || "");
-          const nav = "https://www.google.com/maps/dir/?api=1&destination=" + s.lat + "," + s.lon + "&travelmode=driving";
-          return `<article class="stop" data-i="${i}" tabindex="0" style="--accent:${g.color}">
+          return `<article class="stop" data-i="${i}">
             <h3><span class="num" style="background:${g.color}">${i + 1}</span>${s.label}</h3>
-            <div class="note">Sätt upp: ${setup}</div>
-            <div class="times">
-              <span>Igång <strong>${s.iga}</strong></span>
-              <span>Första <strong>${s.forsta}</strong></span>
-              <span>Sista <strong>${s.sista}</strong></span>
-            </div>
+            <div class="note">${s.setup || ""}</div>
+            <div class="times"><span>Igång <strong>${s.iga}</strong></span><span>Första <strong>${s.forsta}</strong></span><span>Sista <strong>${s.sista}</strong></span></div>
             ${s.placering ? `<div class="note${warn ? " warn" : ""}">${s.placering}</div>` : ""}
-            <div class="times"><a href="${nav}" target="_blank" rel="noopener">Navigera hit</a></div>
-          </article>${g.legs[i] ? `<div class="leg">Kör ${g.legs[i].km} km · ${g.legs[i].min} min till nästa</div>` : ""}`;
-        }).join("")}
-        <p class="hint">Numren är kortaste körvägen, inte igång-ordning. Igång-tiden står på varje stopp.</p>
-      `;
+          </article>${g.legs[i] ? `<div class="leg">${g.legs[i].km} km · ${g.legs[i].min} min till nästa</div>` : ""}`;
+        }).join("")}`;
       sidebar.querySelectorAll(".stop").forEach((el) => {
-        const pick = (ev) => {
-          if (ev.target.closest("a")) return;
-          selectStop(Number(el.dataset.i), true);
-        };
-        el.addEventListener("click", pick);
-        el.addEventListener("keydown", (ev) => {
-          if (ev.key === "Enter" || ev.key === " ") {
-            ev.preventDefault();
-            selectStop(Number(el.dataset.i), true);
-          }
-        });
+        el.addEventListener("click", () => selectStop(Number(el.dataset.i), true));
       });
       paintSelection(fromHash && /\/[1-9]\d*$/.test(location.hash));
-      setTimeout(() => map.invalidateSize(), 150);
+      setTimeout(() => {
+        if (routeLine) map.fitBounds(routeLine.getBounds(), mapPad());
+      }, 250);
     }
 
     function selectStop(i, pan) {
@@ -385,9 +408,10 @@
       selected = i;
       setHash(currentId, selected, true);
       markers.forEach((m, n) => {
-        m.setIcon(markerIcon(g.color, n + 1, g.stops[n].label, n === selected));
-        m.setZIndexOffset(n === selected ? 700 : 0);
+        m.setIcon(markerIcon(g.color, n + 1, n === selected));
+        m.setZIndexOffset(n === selected ? 800 : 0);
       });
+      renderNow(g);
       paintSelection(pan);
     }
 
@@ -409,11 +433,7 @@
       if (location.protocol === "https:" && navigator.share) {
         try {
           const g = groups.find((x) => x.id === currentId);
-          await navigator.share({
-            title: "HBGM 26 " + g.name,
-            text: g.name + " · stopp " + (selected + 1) + ". " + g.stops[selected].label,
-            url
-          });
+          await navigator.share({ title: "HBGM 26 " + g.name, text: g.stops[selected].label, url });
           return;
         } catch (err) {
           if (err && err.name === "AbortError") return;
@@ -422,9 +442,9 @@
       try {
         await navigator.clipboard.writeText(url);
         showToast("Länk kopierad");
-        return;
-      } catch (_) {}
-      prompt("Kopiera länken och skicka till gruppen", url);
+      } catch {
+        prompt("Kopiera länken", url);
+      }
     });
 
     window.addEventListener("hashchange", () => {
@@ -432,7 +452,11 @@
       if (id !== currentId) show(id, idx, true);
       else selectStop(idx, true);
     });
-
+    window.addEventListener("resize", () => {
+      map.invalidateSize();
+      if (routeLine) map.fitBounds(routeLine.getBounds(), mapPad());
+    });
+    new ResizeObserver(() => map.invalidateSize()).observe(document.getElementById("map"));
     const start = parseHash();
     show(start.id, start.idx, true);
   </script>
