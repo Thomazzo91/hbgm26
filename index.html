@@ -209,7 +209,9 @@
       .handle { display: none; }
       header { right: 42%; }
     }
-    @media (min-width: 860px) {
+    /* Desktop only when it is actually a pointer device — phones that
+       report ~980px width would otherwise get the two-column layout. */
+    @media (min-width: 860px) and (hover: hover) and (pointer: fine) {
       :root { --sheet: 0px; --header-h: 60px; }
       header {
         position: static;
@@ -253,7 +255,7 @@
   </section>
   <div class="toast" id="toast">Länk kopierad</div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="routes.js?v=4"></script>
+  <script src="routes.js?v=5"></script>
   <script>
     const PUBLIC_BASE = "https://thomazzo91.github.io/hbgm26/";
     const groups = window.HBGM_ROUTES.groups;
@@ -312,12 +314,14 @@
       clearTimeout(showToast.t);
       showToast.t = setTimeout(() => { toast.style.display = "none"; }, 1800);
     }
+    function isDesktop() {
+      return window.matchMedia("(min-width: 860px) and (hover: hover) and (pointer: fine)").matches;
+    }
     function mapPad() {
       map.invalidateSize();
       const header = document.querySelector("header").getBoundingClientRect();
-      const sheet = document.querySelector(".sheet").getBoundingClientRect();
-      const landscape = window.innerWidth < 860 && window.matchMedia("(orientation: landscape)").matches;
-      if (window.innerWidth >= 860 || landscape) {
+      const landscape = !isDesktop() && window.matchMedia("(orientation: landscape)").matches;
+      if (isDesktop() || landscape) {
         return { paddingTopLeft: [16, 16], paddingBottomRight: [16, 16] };
       }
       return {
