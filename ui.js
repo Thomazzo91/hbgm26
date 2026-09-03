@@ -688,9 +688,9 @@
   function bootView() {
     renderTeamBar();
     const start = parseHash();
-    if (!teamById(start.id)) currentId = teams()[0].id;
-    else currentId = start.id;
-    show(currentId, start.mode, start.idx, true);
+    const known = teams().some((t) => t.id === start.id);
+    if (!known) show(teams()[0].id, "kortast", 0, false);
+    else show(start.id, start.mode, start.idx, true);
   }
 
   async function applyImported(ev) {
